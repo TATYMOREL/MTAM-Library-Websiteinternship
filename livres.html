@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bibliothèque Koha - Livres</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #book-list > div {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bibliothèque en ligne - Livres</h1>
+  <div id="book-list">
+    <!-- Les livres seront affichés ici avec JavaScript -->
+  </div>
+
+  <script>
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      alert('Veuillez vous connecter');
+      window.location.href = 'login.html';
+    }
+
+    // Remplacez borrowerId par l'identifiant réel de l'utilisateur connecté
+    const borrowerId = 'id_utilisateur_exemple';
+
+    async function fetchBooks() {
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/biblios', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Erreur réseau lors de la récupération des livres');
+        }
+        const data = await response.json();
+        const bookList = document.getElementById('book-list');
+        bookList.innerHTML = '';
+        const items = data.items || data;
+        items.forEach(item => {
+          const bookElement = document.createElement('div');
+          bookElement.innerHTML = `
+            <h2>${item.title || item.name || 'Titre inconnu'}</h2>
+            <p>Auteur: ${item.author || 'Auteur inconnu'}</p>
+            <button onclick="reserveBook('${item.id || item.item_id}')">Réserver</button>
+          `;
+          bookList.appendChild(bookElement);
+        });
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la récupération des livres.');
+      }
+    }
+
+    async function reserveBook(bookId) {
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/holds', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            item_id: bookId,
+            borrower_id: borrowerId
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert('Réservation effectuée avec succès !');
+        } else {
+          alert('Erreur lors de la réservation : ' + (data.message || 'Erreur inconnue'));
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la réservation.');
+      }
+    }
+
+    fetchBooks();
+  </script>
+</body>
+</html>
